@@ -90,45 +90,107 @@
             border-radius: 5px;
             display: none;
         }
+        .info-message {
+            color: #1976d2;
+            margin-top: 10px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .poll-ended {
+            background: #ffebee;
+            color: #d32f2f;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .countdown {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.1em;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>הצבעה: התקנת דוד שמש בגג המשותף</h1>
-        
-        <div class="form-group">
-            <label for="apartment">מספר דירה:</label>
-            <input type="number" id="apartment" min="1" required>
+
+        <div id="pollEnded" class="poll-ended" style="display: none;">
+            ההצבעה הסתיימה
         </div>
 
-        <div class="form-group" id="nameGroup" style="display: none;">
-            <label for="name">שם המצביע:</label>
-            <input type="text" id="name" required>
-        </div>
+        <div id="pollActive" style="display: none;">
+            <div class="countdown" id="countdown"></div>
+            
+            <div class="form-group">
+                <label for="apartment">מספר דירה:</label>
+                <input type="number" id="apartment" min="1" max="19" required>
+            </div>
 
-        <div class="vote-options" id="voteOptions" style="display: none;">
-            <button class="vote-button vote-for" onclick="submitVote('בעד')">בעד</button>
-            <button class="vote-button vote-against" onclick="submitVote('נגד')">נגד</button>
+            <div class="form-group" id="nameGroup" style="display: none;">
+                <label for="name">שם המצביע:</label>
+                <input type="text" id="name" required>
+            </div>
+
+            <div class="vote-options" id="voteOptions" style="display: none;">
+                <button class="vote-button vote-for" onclick="submitVote('בעד')">בעד</button>
+                <button class="vote-button vote-against" onclick="submitVote('נגד')">נגד</button>
+            </div>
         </div>
 
         <div class="error-message" id="errorMessage"></div>
         <div class="success-message" id="successMessage"></div>
 
         <div class="results">
-            <h2>תוצאות ביניים</h2>
-            <p>בעד: <span id="forVotes">0</span></p>
-            <p>נגד: <span id="againstVotes">0</span></p>
-            <p>סה"כ הצביעו: <span id="totalVotes">0</span></p>
+            <h2>תוצאות ההצבעה</h2>
+            <div id="resultsContent" style="display: none;">
+                <p>בעד: <span id="forVotes">0</span></p>
+                <p>נגד: <span id="againstVotes">0</span></p>
+                <p>סה"כ הצביעו: <span id="totalVotes">0</span></p>
+            </div>
+            <div id="resultsMessage" class="info-message">
+                התוצאות יפורסמו בסיום ההצבעה
+            </div>
         </div>
     </div>
 
     <script>
         let canVote = false;
+        const endDate = new Date("{{ .endDate }}");
         const apartmentInput = document.getElementById('apartment');
         const nameGroup = document.getElementById('nameGroup');
         const voteOptions = document.getElementById('voteOptions');
         const errorMessage = document.getElementById('errorMessage');
         const successMessage = document.getElementById('successMessage');
+        const pollEnded = document.getElementById('pollEnded');
+        const pollActive = document.getElementById('pollActive');
+        const resultsContent = document.getElementById('resultsContent');
+        const resultsMessage = document.getElementById('resultsMessage');
+        const countdown = document.getElementById('countdown');
+
+        function updateCountdown() {
+            const now = new Date();
+            const timeLeft = endDate - now;
+
+            if (timeLeft <= 0) {
+                pollEnded.style.display = 'block';
+                pollActive.style.display = 'none';
+                updateResults();
+                return;
+            }
+
+            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+            countdown.textContent = `זמן נותר להצבעה: ${days} ימים, ${hours} שעות, ${minutes} דקות`;
+            pollEnded.style.display = 'none';
+            pollActive.style.display = 'block';
+        }
 
         function showError(message) {
             errorMessage.textContent = message;
@@ -146,9 +208,17 @@
             fetch('/api/results')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('forVotes').textContent = data.for;
-                    document.getElementById('againstVotes').textContent = data.against;
-                    document.getElementById('totalVotes').textContent = data.total;
+                    if (data.hidden) {
+                        resultsContent.style.display = 'none';
+                        resultsMessage.textContent = data.message;
+                        resultsMessage.style.display = 'block';
+                    } else {
+                        resultsContent.style.display = 'block';
+                        resultsMessage.style.display = 'none';
+                        document.getElementById('forVotes').textContent = data.for;
+                        document.getElementById('againstVotes').textContent = data.against;
+                        document.getElementById('totalVotes').textContent = data.total;
+                    }
                 })
                 .catch(error => console.error('Error fetching results:', error));
         }
@@ -156,6 +226,13 @@
         apartmentInput.addEventListener('change', function() {
             const apartmentNumber = this.value;
             if (!apartmentNumber) return;
+
+            if (apartmentNumber < 1 || apartmentNumber > 19) {
+                showError('מספר דירה לא תקין');
+                nameGroup.style.display = 'none';
+                voteOptions.style.display = 'none';
+                return;
+            }
 
             fetch(`/api/check-apartment/${apartmentNumber}`)
                 .then(response => response.json())
@@ -211,17 +288,24 @@
                 nameGroup.style.display = 'none';
                 voteOptions.style.display = 'none';
                 canVote = false;
-                updateResults();
             })
             .catch(error => {
                 showError(error.message || 'אירעה שגיאה בשליחת ההצבעה');
             });
         }
 
-        // Initial results load
-        updateResults();
-        // Update results every 30 seconds
-        setInterval(updateResults, 30000);
+        // Update countdown every minute
+        updateCountdown();
+        setInterval(updateCountdown, 60000);
+
+        // Check if poll has ended and update UI accordingly
+        if (new Date() > endDate) {
+            pollEnded.style.display = 'block';
+            pollActive.style.display = 'none';
+            updateResults();
+        } else {
+            updateResults();
+        }
     </script>
 </body>
 </html> 
