@@ -68,6 +68,7 @@
         .vote-button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
+            opacity: 0.7;
         }
         .results {
             margin-top: 30px;
@@ -114,6 +115,20 @@
             font-size: 1.1em;
             color: #666;
         }
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -159,9 +174,10 @@
             </div>
 
             <div class="vote-options" id="voteOptions" style="display: none;">
-                <button class="vote-button vote-for" onclick="submitVote('בעד')">בעד</button>
-                <button class="vote-button vote-against" onclick="submitVote('נגד')">נגד</button>
+                <button class="vote-button vote-for" onclick="submitVote('בעד')" id="voteFor">בעד</button>
+                <button class="vote-button vote-against" onclick="submitVote('נגד')" id="voteAgainst">נגד</button>
             </div>
+            <div class="spinner" id="spinner"></div>
         </div>
 
         <div class="error-message" id="errorMessage"></div>
@@ -193,6 +209,9 @@
         const resultsContent = document.getElementById('resultsContent');
         const resultsMessage = document.getElementById('resultsMessage');
         const countdown = document.getElementById('countdown');
+        const spinner = document.getElementById('spinner');
+        const voteFor = document.getElementById('voteFor');
+        const voteAgainst = document.getElementById('voteAgainst');
 
         // Add event listener for apartment selection
         apartmentInput.addEventListener('change', function() {
@@ -284,6 +303,16 @@
                 });
         }
 
+        function setLoading(isLoading) {
+            spinner.style.display = isLoading ? 'block' : 'none';
+            voteFor.disabled = isLoading;
+            voteAgainst.disabled = isLoading;
+            if (isLoading) {
+                errorMessage.style.display = 'none';
+                successMessage.style.display = 'none';
+            }
+        }
+
         function submitVote(vote) {
             if (!canVote) return;
 
@@ -294,6 +323,8 @@
                 showError('נא למלא את כל השדות');
                 return;
             }
+
+            setLoading(true);
 
             fetch('/api/vote', {
                 method: 'POST',
@@ -320,6 +351,9 @@
             })
             .catch(error => {
                 showError(error.message || 'אירעה שגיאה בשליחת ההצבעה');
+            })
+            .finally(() => {
+                setLoading(false);
             });
         }
 
