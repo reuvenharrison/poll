@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -145,7 +146,7 @@ func submitVote(c *gin.Context) {
 
 	// Start a transaction
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		apartmentRef := client.Collection("apartments").Doc(string(input.ApartmentNumber))
+		apartmentRef := client.Collection("apartments").Doc(strconv.Itoa(input.ApartmentNumber))
 
 		// Check if apartment already voted
 		_, err := tx.Get(apartmentRef)
