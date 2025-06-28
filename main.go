@@ -12,6 +12,8 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Apartment struct {
@@ -107,7 +109,7 @@ func checkApartment(c *gin.Context) {
 	apartmentNumber := c.Param("number")
 	doc, err := client.Collection("apartments").Doc(apartmentNumber).Get(ctx)
 	if err != nil {
-		if err == iterator.Done {
+		if status.Code(err) == codes.NotFound {
 			c.JSON(http.StatusOK, gin.H{"voted": false})
 			return
 		}
@@ -152,7 +154,7 @@ func submitVote(c *gin.Context) {
 		_, err := tx.Get(apartmentRef)
 		if err == nil {
 			return &gin.Error{Err: err, Type: gin.ErrorTypeBind, Meta: "דירה זו כבר הצביעה"}
-		} else if err != iterator.Done {
+		} else if status.Code(err) != codes.NotFound {
 			return err
 		}
 
