@@ -66,7 +66,6 @@ func initFirestore() error {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	initPollEndTime()
 
 	if err := initFirestore(); err != nil {
@@ -81,7 +80,7 @@ func main() {
 
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
-			"endDate": pollEndTime.Format("2006-01-02T15:04:05"),
+			"endDate": pollEndTime.Format("2006-01-02 15:04:05"),
 		})
 	})
 
