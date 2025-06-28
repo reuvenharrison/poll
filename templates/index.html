@@ -34,7 +34,8 @@
             font-weight: bold;
         }
         input[type="number"],
-        input[type="text"] {
+        input[type="text"],
+        select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -128,7 +129,28 @@
             
             <div class="form-group">
                 <label for="apartment">מספר דירה:</label>
-                <input type="number" id="apartment" min="1" max="19" required>
+                <select id="apartment" required>
+                    <option value="">בחר דירה</option>
+                    <option value="1">דירה 1</option>
+                    <option value="2">דירה 2</option>
+                    <option value="3">דירה 3</option>
+                    <option value="4">דירה 4</option>
+                    <option value="5">דירה 5</option>
+                    <option value="6">דירה 6</option>
+                    <option value="7">דירה 7</option>
+                    <option value="8">דירה 8</option>
+                    <option value="9">דירה 9</option>
+                    <option value="10">דירה 10</option>
+                    <option value="11">דירה 11</option>
+                    <option value="12">דירה 12</option>
+                    <option value="13">דירה 13</option>
+                    <option value="14">דירה 14</option>
+                    <option value="15">דירה 15</option>
+                    <option value="16">דירה 16</option>
+                    <option value="17">דירה 17</option>
+                    <option value="18">דירה 18</option>
+                    <option value="19">דירה 19</option>
+                </select>
             </div>
 
             <div class="form-group" id="nameGroup" style="display: none;">
@@ -171,6 +193,16 @@
         const resultsContent = document.getElementById('resultsContent');
         const resultsMessage = document.getElementById('resultsMessage');
         const countdown = document.getElementById('countdown');
+
+        // Add event listener for apartment selection
+        apartmentInput.addEventListener('change', function() {
+            if (this.value) {
+                checkApartment(this.value);
+            } else {
+                nameGroup.style.display = 'none';
+                voteOptions.style.display = 'none';
+            }
+        });
 
         function updateCountdown() {
             const now = new Date();
@@ -223,10 +255,7 @@
                 .catch(error => console.error('Error fetching results:', error));
         }
 
-        apartmentInput.addEventListener('change', function() {
-            const apartmentNumber = this.value;
-            if (!apartmentNumber) return;
-
+        function checkApartment(apartmentNumber) {
             if (apartmentNumber < 1 || apartmentNumber > 19) {
                 showError('מספר דירה לא תקין');
                 nameGroup.style.display = 'none';
@@ -253,7 +282,7 @@
                     console.error('Error checking apartment:', error);
                     showError('אירעה שגיאה בבדיקת הדירה');
                 });
-        });
+        }
 
         function submitVote(vote) {
             if (!canVote) return;
