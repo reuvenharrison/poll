@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -62,7 +63,47 @@ func initFirestore() error {
 	}
 
 	client, err = firestore.NewClient(ctx, projectID)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Add dummy votes if they don't exist yet
+	dummyKey := "dummy_votes_added"
+	_, err = client.Collection("system").Doc(dummyKey).Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			// Add one dummy vote for each option
+			batch := client.Batch()
+
+			// Dummy "for" vote
+			dummyFor := Vote{
+				Value:     "בעד",
+				RandomKey: rand.Int63(),
+			}
+			batch.Create(client.Collection("votes").NewDoc(), dummyFor)
+
+			// Dummy "against" vote
+			dummyAgainst := Vote{
+				Value:     "נגד",
+				RandomKey: rand.Int63(),
+			}
+			batch.Create(client.Collection("votes").NewDoc(), dummyAgainst)
+
+			// Mark that dummy votes were added
+			batch.Create(client.Collection("system").Doc(dummyKey), map[string]interface{}{
+				"added_at": time.Now(),
+			})
+
+			_, err := batch.Commit(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to add dummy votes: %v", err)
+			}
+		} else {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func main() {
@@ -225,6 +266,10 @@ func getResults(c *gin.Context) {
 		}
 	}
 
+	// Deduct the dummy votes from the totals
+	results.For--
+	results.Against--
+	results.Total -= 2
 	results.Hidden = false
 	c.JSON(http.StatusOK, results)
 }
